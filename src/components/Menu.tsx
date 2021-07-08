@@ -1,3 +1,6 @@
+import React, { useState } from "react";
+import { RouteComponentProps, withRouter, useLocation } from "react-router";
+
 import {
   IonContent,
   IonIcon,
@@ -7,94 +10,159 @@ import {
   IonListHeader,
   IonMenu,
   IonMenuToggle,
-  IonNote,
-} from '@ionic/react';
+  IonToggle,
+  IonAlert,
+} from "@ionic/react";
+import {
+  book,  //ventas
+  fastFoodOutline,  //pedidos
+  person,
+  logOut as out,
+  logIn,
+  moonOutline,
+} from "ionicons/icons";
 
-import { useLocation } from 'react-router-dom';
-import { archiveOutline, archiveSharp, bookmarkOutline, heartOutline, heartSharp, mailOutline, mailSharp, paperPlaneOutline, paperPlaneSharp, trashOutline, trashSharp, warningOutline, warningSharp } from 'ionicons/icons';
-import './Menu.css';
+import { connect } from "../data/connect";
+import { setDarkMode, setIsLoggedIn, logOut } from "../data/user/user.actions";
 
-interface AppPage {
-  url: string;
-  iosIcon: string;
-  mdIcon: string;
+import "./Menu.css";
+
+const routes = {
+  appPages: [
+    { title: "Atender", path: "/", icon: fastFoodOutline, logout: false },
+    { title: "Ventas", path: "/ventas", icon: book, logout: false },
+    { title: 'Account', path: '/account', icon: person, logout: false },
+  ],
+  loggedInPages: [
+    { title: "Cerrar sesión", path: "/logout", icon: out, logout: true },
+    
+  ],
+  loggedOutPages: [{ title: "Iniciar sesión", path: "/", icon: logIn, logout: false }],
+};
+
+interface Pages {
   title: string;
+  path: string;
+  icon: string;
+  routerDirection?: string;
+  logout: boolean
 }
 
-const appPages: AppPage[] = [
-  {
-    title: 'Inbox',
-    url: '/page/Inbox',
-    iosIcon: mailOutline,
-    mdIcon: mailSharp
-  },
-  {
-    title: 'Outbox',
-    url: '/page/Outbox',
-    iosIcon: paperPlaneOutline,
-    mdIcon: paperPlaneSharp
-  },
-  {
-    title: 'Favorites',
-    url: '/page/Favorites',
-    iosIcon: heartOutline,
-    mdIcon: heartSharp
-  },
-  {
-    title: 'Archived',
-    url: '/page/Archived',
-    iosIcon: archiveOutline,
-    mdIcon: archiveSharp
-  },
-  {
-    title: 'Trash',
-    url: '/page/Trash',
-    iosIcon: trashOutline,
-    mdIcon: trashSharp
-  },
-  {
-    title: 'Spam',
-    url: '/page/Spam',
-    iosIcon: warningOutline,
-    mdIcon: warningSharp
-  }
-];
+interface StateProps {
+  darkMode: boolean;
+  isAuthenticated: boolean;
+}
 
-const labels = ['Family', 'Friends', 'Notes', 'Work', 'Travel', 'Reminders'];
+interface DispatchProps {
+  setDarkMode: typeof setDarkMode;
+  setIsLoggedIn: typeof setIsLoggedIn;
+  logOut: typeof logOut
+}
 
-const Menu: React.FC = () => {
+interface MenuProps extends RouteComponentProps, StateProps, DispatchProps { }
+
+const Menu: React.FC<MenuProps> = ({
+  darkMode,
+  history,
+  isAuthenticated,
+  setDarkMode,
+  setIsLoggedIn,
+  logOut
+}) => {
   const location = useLocation();
 
-  return (
-    <IonMenu contentId="main" type="overlay">
-      <IonContent>
-        <IonList id="inbox-list">
-          <IonListHeader>Inbox</IonListHeader>
-          <IonNote>hi@ionicframework.com</IonNote>
-          {appPages.map((appPage, index) => {
-            return (
-              <IonMenuToggle key={index} autoHide={false}>
-                <IonItem className={location.pathname === appPage.url ? 'selected' : ''} routerLink={appPage.url} routerDirection="none" lines="none" detail={false}>
-                  <IonIcon slot="start" ios={appPage.iosIcon} md={appPage.mdIcon} />
-                  <IonLabel>{appPage.title}</IonLabel>
-                </IonItem>
-              </IonMenuToggle>
-            );
-          })}
-        </IonList>
+  const [showAlertLogout, setShowAlertLogOut] = useState(false);
 
-        <IonList id="labels-list">
-          <IonListHeader>Labels</IonListHeader>
-          {labels.map((label, index) => (
-            <IonItem lines="none" key={index}>
-              <IonIcon slot="start" icon={bookmarkOutline} />
-              <IonLabel>{label}</IonLabel>
-            </IonItem>
-          ))}
+
+  function renderlistItems(list: Pages[]) {
+
+    return list
+      .filter((route) => !!route.path)
+      .map((p) => (
+        <IonMenuToggle key={p.title} auto-hide="false">
+          {p.logout ?
+            (<IonItem
+              detail={false}
+              onClick={() => setShowAlertLogOut(true)}
+              className={
+                location.pathname.startsWith(p.path) ? "selected" : "ion-item-pointer"
+              }
+            >
+              <IonIcon slot="start" icon={p.icon} />
+              <IonLabel>{p.title}</IonLabel>
+            </IonItem>) :
+
+            (<IonItem
+              detail={false}
+              routerLink={p.path}
+              className={
+                location.pathname.endsWith(p.path) ? "selected" : undefined
+              }
+            >
+              <IonIcon slot="start" icon={p.icon} />
+              <IonLabel>{p.title}</IonLabel>
+            </IonItem>)
+          }
+        </IonMenuToggle>
+      ));
+  }
+
+  return (
+    <IonMenu type="overlay" contentId="main">
+      <IonContent forceOverscroll={false}>
+        <IonAlert
+          isOpen={showAlertLogout}
+          onDidDismiss={() => setShowAlertLogOut(false)}
+          header={'Cerrar sesión'}
+          message={'¿Seguro que desea cerrar sesión?'}
+          buttons={[{
+            text: 'Cancelar',
+            role: 'cancel',
+            cssClass: 'secondary',
+          },
+          {
+            text: 'Aceptar',
+            cssClass: 'ion-alert-accept-button',
+            handler: async () => {
+              await logOut();
+              history.push('/');
+            }
+          }]}
+        />
+        {isAuthenticated ? (
+          <IonList lines="none">
+            <IonListHeader>Menú</IonListHeader>
+            {renderlistItems(routes.appPages)}
+          </IonList>
+        ) : null}
+        <IonList lines="none">
+          <IonListHeader>Cuenta</IonListHeader>
+          {isAuthenticated
+            ? renderlistItems(routes.loggedInPages)
+            : renderlistItems(routes.loggedOutPages)}
+          <IonItem>
+            <IonIcon slot="start" icon={moonOutline}></IonIcon>
+            <IonLabel>Dark Mode </IonLabel>
+            <IonToggle
+              checked={darkMode}
+              onClick={() => setDarkMode(!darkMode)}
+            />
+          </IonItem>
         </IonList>
       </IonContent>
     </IonMenu>
   );
 };
 
-export default Menu;
+export default connect<{}, StateProps, DispatchProps>({
+  mapStateToProps: (state) => ({
+    darkMode: state.user.darkMode,
+    isAuthenticated: state.user.isLoggedin,
+  }),
+  mapDispatchToProps: {
+    setDarkMode,
+    setIsLoggedIn,
+    logOut
+  },
+  component: withRouter(Menu),
+});
