@@ -13,6 +13,8 @@ import {
   IonList,
   IonCard,
   IonCardContent,
+  IonRefresher,
+  IonRefresherContent,
 } from "@ionic/react";
 import { Venta } from "../models/Venta";
 import { Capacitor } from "@capacitor/core";
@@ -45,6 +47,7 @@ const Ventas: React.FC<VentasProps> = ({ accessToken, tokenType, id }) => {
   const [messageData, setMessageData] = useState<string>(
     "No hay datos por mostrar."
   );
+  const ionRefresherRef = useRef<HTMLIonRefresherElement>(null)
   const [showMessageNetworkStatus, setShowMessageNetworkStatus] =
     useState<boolean>(false);
   const isMountedRef = useRef<boolean>(false);
@@ -95,6 +98,15 @@ const Ventas: React.FC<VentasProps> = ({ accessToken, tokenType, id }) => {
       });
   };
 
+  const doRefresh = () => {
+    loadVentas();
+    setTimeout(() => {
+        ionRefresherRef.current!.complete();
+        setCompleteToast(true);
+    }, 2500)
+}
+
+
   useEffect(() => {
     Network.addListener("networkStatusChange", (state: any) => {
       let status = state.connected;
@@ -130,6 +142,11 @@ const Ventas: React.FC<VentasProps> = ({ accessToken, tokenType, id }) => {
         </IonToolbar>
       </IonHeader>
       <IonContent>
+      <IonRefresher ref={ionRefresherRef} pullMax={0}
+                    slot="fixed" onIonRefresh={doRefresh}>
+                    <IonRefresherContent
+                    ></IonRefresherContent>
+                </IonRefresher>
         <IonToast
           cssClass={"text-center"}
           isOpen={networkStatusToast}
