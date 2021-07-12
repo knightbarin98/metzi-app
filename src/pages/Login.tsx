@@ -113,9 +113,10 @@ const Login: React.FC<LoginProps> = ({
         history.push("/");
       })
       .catch((errors) => {
+        alert(errors)
         console.log(errors);
         setLoading(false);
-        setErrors({ errors: errors.response.data.errors });
+        //setErrors({ errors: errors.response.data.errors });
       });
   };
 
